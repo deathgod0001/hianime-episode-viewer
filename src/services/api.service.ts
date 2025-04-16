@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { API, CORS_PROXY } from '../config/api';
 import { 
@@ -14,12 +13,16 @@ import {
 // Helper function to handle CORS proxying when needed
 const fetchWithProxy = async (url: string) => {
   try {
+    console.log("Fetching data from:", url);
     const response = await axios.get(url);
     return response.data;
   } catch (error) {
+    console.log("Direct fetch failed, trying with CORS proxy:", url);
     // If direct request fails, try with CORS proxy
     try {
-      const proxyResponse = await axios.get(`${CORS_PROXY}${encodeURIComponent(url)}`);
+      const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
+      console.log("Using proxy URL:", proxyUrl);
+      const proxyResponse = await axios.get(proxyUrl);
       // The proxy response contains the data in the contents field
       if (proxyResponse.data && proxyResponse.data.contents) {
         return JSON.parse(proxyResponse.data.contents);
@@ -47,14 +50,26 @@ export const AnimeService = {
 
   // Get anime episodes
   getAnimeEpisodes: async (animeId: string): Promise<EpisodeInfo> => {
-    const response = await fetchWithProxy(API.episodes(animeId));
-    return response.data;
+    try {
+      console.log("Fetching episodes for anime:", animeId);
+      const response = await fetchWithProxy(API.episodes(animeId));
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch anime episodes:", error);
+      throw error;
+    }
   },
 
   // Get episode servers
   getEpisodeServers: async (episodeId: string): Promise<EpisodeServers> => {
-    const response = await fetchWithProxy(API.episodeServers(episodeId));
-    return response.data;
+    try {
+      console.log("Fetching servers for episode:", episodeId);
+      const response = await fetchWithProxy(API.episodeServers(episodeId));
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch episode servers:", error);
+      throw error;
+    }
   },
 
   // Get episode streaming sources
@@ -63,8 +78,15 @@ export const AnimeService = {
     server: string = "hd-1", 
     category: string = "sub"
   ): Promise<StreamingData> => {
-    const response = await fetchWithProxy(API.episodeSources(episodeId, server, category));
-    return response.data;
+    try {
+      console.log("Fetching sources for episode:", episodeId, "server:", server, "category:", category);
+      const response = await fetchWithProxy(API.episodeSources(episodeId, server, category));
+      console.log("Episode sources response:", response);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch episode sources:", error);
+      throw error;
+    }
   },
 
   // Search anime

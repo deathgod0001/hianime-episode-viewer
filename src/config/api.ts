@@ -3,6 +3,14 @@
 export const BASE_URL = "https://hianime-up.vercel.app";
 export const CORS_PROXY = "https://api.allorigins.win/get?url=";
 
+// Headers for API requests
+export const DEFAULT_HEADERS = {
+  'Referer': 'https://hianime-up.vercel.app/',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Origin': 'https://hianime-up.vercel.app'
+};
+
 // API Endpoints
 export const API = {
   home: `${BASE_URL}/api/v2/hianime/home`,
