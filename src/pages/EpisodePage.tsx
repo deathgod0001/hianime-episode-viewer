@@ -1,22 +1,20 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { AnimeService } from '@/services/api.service';
 import { EpisodeInfo, EpisodeServers, StreamingData } from '@/types/anime';
 import VideoPlayer from '@/components/video/VideoPlayer';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
 import { 
   Monitor, 
   ChevronLeft, 
-  ChevronRight,
-  RefreshCw
+  ChevronRight 
 } from 'lucide-react';
 
 const EpisodePage = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const episodeIdParam = searchParams.get('ep');
-  const { toast } = useToast();
   
   const [episodeList, setEpisodeList] = useState<EpisodeInfo | null>(null);
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState<number>(-1);
@@ -27,7 +25,6 @@ const EpisodePage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("sub");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
 
   // Fetch episode list for the anime
   useEffect(() => {
@@ -36,10 +33,7 @@ const EpisodePage = () => {
       
       try {
         setIsLoading(true);
-        setError(null);
-        console.log("Fetching episodes for anime ID:", id);
         const data = await AnimeService.getAnimeEpisodes(id);
-        console.log("Episodes data received:", data);
         setEpisodeList(data);
         
         // Find the current episode in the list
@@ -65,18 +59,13 @@ const EpisodePage = () => {
       } catch (err) {
         console.error('Failed to fetch episodes:', err);
         setError('Failed to load episode list. Please try again later.');
-        toast({
-          title: "Error",
-          description: "Failed to load episodes. Please try again.",
-          variant: "destructive"
-        });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchEpisodes();
-  }, [id, episodeIdParam, setSearchParams, retryCount, toast]);
+  }, [id, episodeIdParam, setSearchParams]);
 
   // Fetch servers for the current episode
   useEffect(() => {
@@ -84,10 +73,7 @@ const EpisodePage = () => {
       if (!episodeIdParam) return;
       
       try {
-        setError(null);
-        console.log("Fetching servers for episode:", episodeIdParam);
         const data = await AnimeService.getEpisodeServers(episodeIdParam);
-        console.log("Episode servers data:", data);
         setEpisodeServers(data);
         
         // Set default category based on availability
@@ -103,16 +89,11 @@ const EpisodePage = () => {
       } catch (err) {
         console.error('Failed to fetch episode servers:', err);
         setError('Failed to load streaming servers. Please try again later.');
-        toast({
-          title: "Error",
-          description: "Failed to load streaming servers. Please try again.",
-          variant: "destructive"
-        });
       }
     };
 
     fetchEpisodeServers();
-  }, [episodeIdParam, retryCount, toast]);
+  }, [episodeIdParam]);
 
   // Fetch streaming data when server or category changes
   useEffect(() => {
@@ -121,30 +102,23 @@ const EpisodePage = () => {
       
       try {
         setIsLoading(true);
-        setError(null);
-        console.log("Fetching sources for episode:", episodeIdParam, "server:", selectedServer, "category:", selectedCategory);
         const data = await AnimeService.getEpisodeSources(
           episodeIdParam, 
           selectedServer, 
           selectedCategory
         );
-        console.log("Streaming data received:", data);
         setStreamingData(data);
+        setError(null);
       } catch (err) {
         console.error('Failed to fetch streaming data:', err);
         setError('Failed to load video stream. Please try another server or category.');
-        toast({
-          title: "Error",
-          description: "Failed to load video stream. Please try another server or category.",
-          variant: "destructive"
-        });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchStreamingData();
-  }, [episodeIdParam, selectedServer, selectedCategory, retryCount, toast]);
+  }, [episodeIdParam, selectedServer, selectedCategory]);
 
   const navigateToEpisode = (index: number) => {
     if (!episodeList || !episodeList.episodes || index < 0 || index >= episodeList.episodes.length) {
@@ -163,10 +137,6 @@ const EpisodePage = () => {
     navigateToEpisode(currentEpisodeIndex + 1);
   };
 
-  const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
-  };
-
   // Get current episode details
   const currentEpisode = episodeList?.episodes && currentEpisodeIndex >= 0 
     ? episodeList.episodes[currentEpisodeIndex] 
@@ -176,13 +146,10 @@ const EpisodePage = () => {
   const hasPrevious = currentEpisodeIndex > 0;
   const hasNext = episodeList?.episodes && currentEpisodeIndex < episodeList.episodes.length - 1;
 
-  if (!id) {
+  if (!id || !episodeList) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="text-center">
-          <p className="text-lg text-red-400 mb-4">Anime ID not found in URL.</p>
-          <Button as={Link} to="/" variant="outline">Back to Home</Button>
-        </div>
+        <div className="w-16 h-16 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -208,11 +175,9 @@ const EpisodePage = () => {
           <div className="aspect-video flex items-center justify-center flex-col p-6">
             <p className="text-lg text-red-400 mb-4">{error}</p>
             <Button 
-              onClick={handleRetry}
+              onClick={() => window.location.reload()}
               variant="outline"
-              className="flex items-center gap-2"
             >
-              <RefreshCw size={16} className="animate-spin" />
               Retry
             </Button>
           </div>
@@ -342,7 +307,7 @@ const EpisodePage = () => {
       <div className="bg-gray-800/50 p-4 rounded-lg">
         <h2 className="text-xl font-semibold mb-4">All Episodes</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2">
-          {episodeList?.episodes?.map((episode, index) => (
+          {episodeList.episodes.map((episode, index) => (
             <Button
               key={episode.episodeId}
               variant={currentEpisodeIndex === index ? 'default' : 'outline'}

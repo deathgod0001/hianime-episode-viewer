@@ -10,11 +10,9 @@ import {
   VolumeX, 
   Settings, 
   Maximize, 
-  Minimize,
-  RefreshCw
+  Minimize 
 } from 'lucide-react';
 import { StreamingData } from '@/types/anime';
-import { useToast } from '@/hooks/use-toast';
 
 interface VideoPlayerProps {
   streamingData: StreamingData | null;
@@ -40,20 +38,12 @@ const VideoPlayer = ({
   const [controlsVisible, setControlsVisible] = useState(true);
   const [isBuffering, setIsBuffering] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [videoError, setVideoError] = useState<string | null>(null);
   
-  const { toast } = useToast();
   const playerRef = useRef<HTMLVideoElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const controlsTimeout = useRef<NodeJS.Timeout | null>(null);
   
   const videoSource = streamingData?.sources?.[0]?.url || '';
-  
-  useEffect(() => {
-    console.log("Video source updated:", videoSource);
-    // Reset video error when source changes
-    setVideoError(null);
-  }, [videoSource]);
 
   useEffect(() => {
     // Reset player state when source changes
@@ -105,15 +95,7 @@ const VideoPlayer = ({
     if (isPlaying) {
       player.pause();
     } else {
-      player.play().catch(err => {
-        console.error("Video playback error:", err);
-        setVideoError("Playback failed. Please try another server or reload the page.");
-        toast({
-          title: "Playback Error",
-          description: "Failed to play video. Please try another server.",
-          variant: "destructive"
-        });
-      });
+      player.play();
     }
     setIsPlaying(!isPlaying);
   };
@@ -167,17 +149,6 @@ const VideoPlayer = ({
     }
   };
 
-  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
-    console.error("Video error:", e);
-    setVideoError("Failed to load video. Please try another server or refresh the page.");
-    setIsBuffering(false);
-    toast({
-      title: "Video Error",
-      description: "Failed to load video stream. Try switching servers.",
-      variant: "destructive"
-    });
-  };
-
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -201,21 +172,6 @@ const VideoPlayer = ({
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handleReload = () => {
-    if (playerRef.current) {
-      const currentTime = playerRef.current.currentTime;
-      playerRef.current.load();
-      playerRef.current.currentTime = currentTime;
-      if (isPlaying) {
-        playerRef.current.play().catch(err => {
-          console.error("Video reload error:", err);
-          setVideoError("Reload failed. Please try another server.");
-        });
-      }
-      setVideoError(null);
-    }
-  };
-
   if (!streamingData || !videoSource) {
     return (
       <div className="w-full aspect-video bg-gray-900 rounded-lg flex items-center justify-center">
@@ -226,27 +182,11 @@ const VideoPlayer = ({
     );
   }
 
-  // Apply custom headers for the video element
-  const videoHeaders = streamingData.headers || {};
-
   return (
     <div 
       className="relative w-full aspect-video bg-black rounded-lg overflow-hidden group"
       ref={playerContainerRef}
     >
-      {videoError ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-50 flex-col">
-          <p className="text-red-400 mb-4">{videoError}</p>
-          <button 
-            onClick={handleReload}
-            className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md flex items-center gap-2"
-          >
-            <RefreshCw size={16} />
-            Try Again
-          </button>
-        </div>
-      ) : null}
-
       <ReactHlsPlayer
         src={videoSource}
         autoPlay={false}
@@ -254,21 +194,9 @@ const VideoPlayer = ({
         playerRef={playerRef}
         width="100%"
         height="auto"
-        hlsConfig={{
-          xhrSetup: (xhr: XMLHttpRequest) => {
-            // Apply headers from streamingData
-            Object.entries(videoHeaders).forEach(([key, value]) => {
-              xhr.setRequestHeader(key, value);
-            });
-          },
-          debug: false,
-        }}
         onLoadedMetadata={(e) => setDuration((e.target as HTMLVideoElement).duration)}
         onTimeUpdate={handleTimeUpdate}
-        onPlaying={() => {
-          setIsPlaying(true);
-          setIsBuffering(false);
-        }}
+        onPlaying={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onWaiting={() => setIsBuffering(true)}
         onCanPlay={() => setIsBuffering(false)}
@@ -276,7 +204,6 @@ const VideoPlayer = ({
           setIsPlaying(false);
           if (hasNext && onNext) onNext();
         }}
-        onError={handleVideoError}
         muted={isMuted}
         className="w-full h-full"
       />
@@ -443,16 +370,6 @@ const VideoPlayer = ({
                 <option value="1.5">1.5x</option>
                 <option value="2">2x</option>
               </select>
-            </div>
-
-            <div>
-              <button 
-                onClick={handleReload}
-                className="bg-gray-800 hover:bg-gray-700 rounded p-1 w-full text-sm flex items-center justify-center gap-1"
-              >
-                <RefreshCw size={14} />
-                Reload Player
-              </button>
             </div>
           </div>
         </div>
