@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { AnimeItem } from '@/types/anime';
@@ -7,17 +6,19 @@ interface AnimeCardProps {
   anime: AnimeItem;
   showType?: boolean;
   showEpisodes?: boolean;
+  className?: string;
 }
 
 const AnimeCard: React.FC<AnimeCardProps> = ({ 
   anime, 
   showType = true, 
-  showEpisodes = true 
+  showEpisodes = true,
+  className
 }) => {
   return (
     <Link 
       to={`/anime/${anime.id}`} 
-      className="group relative block rounded-lg overflow-hidden bg-gray-800 transition-transform hover:scale-105 hover:shadow-xl"
+      className={`group relative block rounded-lg overflow-hidden bg-gray-800 transition-transform hover:scale-105 hover:shadow-xl ${className}`}
     >
       <div className="aspect-[2/3] w-full h-full">
         <img 

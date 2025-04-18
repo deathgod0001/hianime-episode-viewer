@@ -10,7 +10,6 @@ import AnimePage from "./pages/AnimePage";
 import EpisodePage from "./pages/EpisodePage";
 import SearchPage from "./pages/SearchPage";
 import CategoryPage from "./pages/CategoryPage";
-import RandomAnimePage from "./pages/RandomAnimePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,7 +26,6 @@ const App = () => (
           <Route path="/anime/:id/watch" element={<Layout><EpisodePage /></Layout>} />
           <Route path="/search" element={<Layout><SearchPage /></Layout>} />
           <Route path="/category/:category" element={<Layout><CategoryPage /></Layout>} />
-          <Route path="/random" element={<Layout><RandomAnimePage /></Layout>} />
           <Route path="*" element={<Layout><NotFound /></Layout>} />
         </Routes>
       </BrowserRouter>

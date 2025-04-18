@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import ReactHlsPlayer from 'react-hls-player';
 import Hls from 'hls.js';
@@ -339,246 +338,109 @@ const VideoPlayer = ({
   }
 
   return (
-    <div 
-      className="relative w-full aspect-video bg-black rounded-lg overflow-hidden group"
-      ref={playerContainerRef}
-    >
-      <ReactHlsPlayer
-        src={videoSource}
-        autoPlay={false}
-        controls={false}
-        playerRef={playerRef}
-        width="100%"
-        height="auto"
-        onLoadedMetadata={(e) => setDuration((e.target as HTMLVideoElement).duration)}
-        onTimeUpdate={handleTimeUpdate}
-        onPlaying={() => {
-          setIsPlaying(true);
-          setIsBuffering(false);
-        }}
-        onPause={() => setIsPlaying(false)}
-        onWaiting={() => setIsBuffering(true)}
-        onCanPlay={() => setIsBuffering(false)}
-        onEnded={() => {
-          setIsPlaying(false);
-          if (hasNext && onNext) onNext();
-        }}
-        muted={isMuted}
-        className="w-full h-full"
-      />
+    <div className="relative w-full bg-black">
+      {/* Main video player */}
+      <div className="aspect-video relative">
+        <ReactHlsPlayer
+          src={videoSource}
+          autoPlay={false}
+          controls={false}
+          playerRef={playerRef}
+          width="100%"
+          height="auto"
+          onLoadedMetadata={(e) => setDuration((e.target as HTMLVideoElement).duration)}
+          onTimeUpdate={handleTimeUpdate}
+          onPlaying={() => {
+            setIsPlaying(true);
+            setIsBuffering(false);
+          }}
+          onPause={() => setIsPlaying(false)}
+          onWaiting={() => setIsBuffering(true)}
+          onCanPlay={() => setIsBuffering(false)}
+          onEnded={() => {
+            setIsPlaying(false);
+            if (hasNext && onNext) onNext();
+          }}
+          muted={isMuted}
+          className="w-full h-full bg-black"
+        />
 
-      {isBuffering && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-          <div className="w-12 h-12 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-        </div>
-      )}
-
-      {/* Controls overlay */}
-      <div 
-        className={`absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/40 flex flex-col justify-between px-4 py-3 transition-opacity duration-300 ${
-          controlsVisible || !isPlaying ? 'opacity-100' : 'opacity-0'
-        } pointer-events-none`}
-      >
-        {/* Top controls */}
-        <div className="flex justify-between items-center pointer-events-auto">
-          <div className="text-white font-medium flex items-center">
-            <span className="bg-red-600 text-white px-2 py-0.5 rounded-md text-sm">{WEBSITE_INFO.name}</span>
-            <span className="mx-2 opacity-70">by</span>
-            <span className="text-sm font-semibold">{WEBSITE_INFO.creator}</span>
-          </div>
-          
-          <button 
-            onClick={() => setIsSettingsOpen(!isSettingsOpen)} 
-            className="text-white p-2 hover:bg-white/20 rounded-full transition-colors"
-          >
-            <Settings size={20} />
-          </button>
-        </div>
-
-        {/* Center play/pause button */}
-        <button 
-          onClick={togglePlay}
-          className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-600/80 hover:bg-red-600 p-4 rounded-full text-white pointer-events-auto transition-transform hover:scale-110 shadow-lg"
+        {/* Custom controls overlay */}
+        <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent 
+          flex flex-col justify-between p-4 transition-opacity duration-300 
+          ${controlsVisible || !isPlaying ? 'opacity-100' : 'opacity-0'}`}
         >
-          {isPlaying ? <Pause size={28} /> : <Play size={28} />}
-        </button>
-
-        {/* Bottom controls */}
-        <div className="space-y-3 pointer-events-auto">
-          {/* Progress bar */}
-          <div className="flex items-center gap-2">
-            <span className="text-white text-sm">{formatTime(currentTime)}</span>
-            <input 
-              type="range"
-              min={0}
-              max={duration || 100}
-              value={currentTime}
-              onChange={handleSeek}
-              className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, #ef4444 ${(currentTime / (duration || 1)) * 100}%, #4b5563 ${(currentTime / (duration || 1)) * 100}%)`,
-              }}
-            />
-            <span className="text-white text-sm">{formatTime(duration)}</span>
-          </div>
-          
-          {/* Control buttons */}
+          {/* Top bar */}
           <div className="flex justify-between items-center">
+            <div className="text-white text-sm">
+              You are watching Episode {streamingData?.episodeNumber || 1}
+            </div>
             <div className="flex items-center gap-2">
-              <button 
-                onClick={togglePlay}
-                className="text-white hover:text-red-500"
-                disabled={!videoSource}
-              >
-                {isPlaying ? <Pause size={24} /> : <Play size={24} />}
+              <button onClick={toggleMute} className="text-white hover:text-red-500">
+                {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
               </button>
-              
-              <button 
-                onClick={onPrevious}
-                className={`text-white hover:text-red-500 ${!hasPrevious ? 'opacity-50 cursor-not-allowed' : ''}`}
-                disabled={!hasPrevious}
-              >
-                <SkipBack size={24} />
-              </button>
-              
-              <button 
-                onClick={onNext}
-                className={`text-white hover:text-red-500 ${!hasNext ? 'opacity-50 cursor-not-allowed' : ''}`}
-                disabled={!hasNext}
-              >
-                <SkipForward size={24} />
-              </button>
-              
-              <div className="flex items-center gap-2 ml-2">
-                <button 
-                  onClick={toggleMute}
-                  className="text-white hover:text-red-500"
-                >
-                  {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
-                </button>
-                
-                <input 
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  value={isMuted ? 0 : volume}
-                  onChange={handleVolumeChange}
-                  className="w-20 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer"
-                  style={{
-                    background: `linear-gradient(to right, white ${volume * 100}%, #4b5563 ${volume * 100}%)`,
-                  }}
-                />
-              </div>
-
-              {streamingData.subtitles && streamingData.subtitles.length > 0 && (
-                <button 
-                  onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                  className="text-white hover:text-red-500 ml-2"
-                >
-                  <Subtitles size={20} />
-                </button>
-              )}
-              
-              <button
-                className="text-white hover:text-red-500 ml-2"
-                onClick={() => {
-                  toast({
-                    title: "Casting",
-                    description: "Preparing Chromecast...",
-                    variant: "default"
-                  });
-                }}
-              >
-                <Cast size={20} />
+              <button onClick={toggleFullscreen} className="text-white hover:text-red-500">
+                {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
               </button>
             </div>
-            
-            <button 
-              onClick={toggleFullscreen}
-              className="text-white hover:text-red-500"
-            >
-              {isFullscreen ? <Minimize size={24} /> : <Maximize size={24} />}
-            </button>
+          </div>
+
+          {/* Center play/pause button */}
+          <button
+            onClick={togglePlay}
+            className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2
+              bg-red-600/80 p-4 rounded-full text-white hover:bg-red-600 transition-all"
+          >
+            {isPlaying ? <Pause size={24} /> : <Play size={24} />}
+          </button>
+
+          {/* Bottom controls */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm">{formatTime(currentTime)}</span>
+              <div className="flex-1">
+                <input
+                  type="range"
+                  value={currentTime}
+                  min={0}
+                  max={duration || 100}
+                  onChange={handleSeek}
+                  className="w-full accent-red-600"
+                />
+              </div>
+              <span className="text-white text-sm">{formatTime(duration)}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Settings menu */}
-      {isSettingsOpen && (
-        <div className="absolute bottom-16 right-4 bg-gray-900/95 rounded-lg shadow-lg p-4 text-white pointer-events-auto backdrop-blur-md border border-gray-700">
-          <h3 className="font-medium mb-2">Settings</h3>
-          
-          <div className="space-y-3">
-            {streamingData.subtitles && streamingData.subtitles.length > 0 && (
-              <div>
-                <p className="text-sm text-gray-300 mb-1">Subtitles</p>
-                <select 
-                  className="bg-gray-800 rounded p-1.5 w-full text-sm border border-gray-700"
-                  value={activeSubtitle || ''}
-                  onChange={(e) => {
-                    const selectedLang = e.target.value;
-                    setActiveSubtitle(selectedLang);
-                    
-                    const video = playerRef.current;
-                    if (video && video.textTracks) {
-                      for (let i = 0; i < video.textTracks.length; i++) {
-                        if (video.textTracks[i].label === selectedLang) {
-                          video.textTracks[i].mode = 'showing';
-                        } else {
-                          video.textTracks[i].mode = 'hidden';
-                        }
-                      }
-                    }
-                  }}
-                >
-                  <option value="">Off</option>
-                  {streamingData.subtitles.map((sub, index) => (
-                    <option key={index} value={sub.lang}>
-                      {sub.lang}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            
-            <div>
-              <p className="text-sm text-gray-300 mb-1">Playback Speed</p>
-              <select 
-                className="bg-gray-800 rounded p-1.5 w-full text-sm border border-gray-700"
-                onChange={(e) => {
-                  if (playerRef.current) {
-                    playerRef.current.playbackRate = parseFloat(e.target.value);
-                  }
-                }}
-                defaultValue="1"
-              >
-                <option value="0.25">0.25x</option>
-                <option value="0.5">0.5x</option>
-                <option value="0.75">0.75x</option>
-                <option value="1">Normal</option>
-                <option value="1.25">1.25x</option>
-                <option value="1.5">1.5x</option>
-                <option value="2">2x</option>
-              </select>
-            </div>
-            
-            <div>
-              <p className="text-sm text-gray-300 mb-1">Quality</p>
-              <select 
-                className="bg-gray-800 rounded p-1.5 w-full text-sm border border-gray-700"
-                defaultValue="auto"
-              >
-                <option value="auto">Auto</option>
-                <option value="1080">1080p</option>
-                <option value="720">720p</option>
-                <option value="480">480p</option>
-                <option value="360">360p</option>
-              </select>
-            </div>
+      {/* Episode selection bar */}
+      <div className="bg-[#1a1a1a] p-4">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <span className="text-red-500 text-sm font-medium">SUB:</span>
+            <button className="bg-red-600 text-white px-3 py-1 rounded text-sm">
+              Server 2
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onPrevious}
+              disabled={!hasPrevious}
+              className={`${hasPrevious ? 'text-white' : 'text-gray-600'}`}
+            >
+              Previous
+            </button>
+            <button
+              onClick={onNext}
+              disabled={!hasNext}
+              className={`${hasNext ? 'text-white' : 'text-gray-600'}`}
+            >
+              Next
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
