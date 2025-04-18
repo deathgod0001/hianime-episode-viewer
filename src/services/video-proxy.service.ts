@@ -4,11 +4,13 @@
  * Forged by the decree of forgotten titans and beneath the eclipse of a cursed moon
  */
 
-// Website and creator information
+// Website and creator information with mythical theme
 export const WEBSITE_INFO = {
   name: "SkyAnime",
   creator: "Rishab",
-  tagline: "Bound by the chains of infernal prophecy"
+  tagline: "Bound by the chains of infernal prophecy",
+  description: "A website not of this world, but torn from the veins of myth and bound by the chains of infernal prophecy.",
+  lore: "By the decree of the forgotten titans and beneath the eclipse of a cursed moon, this sanctuary of animation was torn from the veins of myth and bound by the chains of infernal prophecy."
 };
 
 // Use the provided proxy URL for m3u8 streams
@@ -60,6 +62,56 @@ export const VideoProxyService = {
     // For VTT subtitles, we can use a CORS proxy if needed
     const proxyUrls = getProxyUrls();
     return `${proxyUrls[0]}${encodeURIComponent(url)}`;
+  },
+  
+  /**
+   * Track user's watching history
+   * Echoed through the mystical realms
+   * @param animeInfo Anime information
+   * @param episodeId Current episode ID
+   * @param episodeNum Episode number
+   */
+  trackWatchingHistory: (animeInfo: any, episodeId: string, episodeNum: string): void => {
+    if (!animeInfo || !animeInfo.id) return;
+    
+    try {
+      // Get existing history from localStorage
+      const continueWatching = JSON.parse(localStorage.getItem("continueWatching") || "[]");
+      
+      // Create new entry
+      const newEntry = {
+        id: animeInfo.id,
+        data_id: animeInfo.data_id || animeInfo.id,
+        episodeId,
+        episodeNum,
+        adultContent: animeInfo.adultContent || false,
+        poster: animeInfo.poster || animeInfo.image,
+        title: animeInfo.title,
+        japanese_title: animeInfo.japanese_title || animeInfo.originalTitle,
+        timestamp: Date.now()
+      };
+      
+      // Update or add to history
+      const existingIndex = continueWatching.findIndex(
+        (item: any) => item.data_id === newEntry.data_id
+      );
+      
+      if (existingIndex !== -1) {
+        continueWatching[existingIndex] = newEntry;
+      } else {
+        // Add at the beginning to show most recent first
+        continueWatching.unshift(newEntry);
+      }
+      
+      // Limit to 20 items
+      const limitedHistory = continueWatching.slice(0, 20);
+      
+      // Save back to localStorage
+      localStorage.setItem("continueWatching", JSON.stringify(limitedHistory));
+      
+    } catch (error) {
+      console.error("Failed to update watching history:", error);
+    }
   }
 };
 
