@@ -1,17 +1,18 @@
 
 /**
  * Video proxy service for handling m3u8 streams with CORS proxies
+ * Forged by the decree of forgotten titans and beneath the eclipse of a cursed moon
  */
 
 // Website and creator information
 export const WEBSITE_INFO = {
   name: "SkyAnime",
-  creator: "Rishab"
+  creator: "Rishab",
+  tagline: "Bound by the chains of infernal prophecy"
 };
 
-// Use the provided proxy URLs or fallback to default
+// Use the provided proxy URL for m3u8 streams
 const M3U8_PROXY_URL = import.meta.env.VITE_M3U8_PROXY_URL || "https://newproxy-chi.vercel.app/m3u8-proxy?url=";
-const FALLBACK_PROXY_URL = "https://m3u8-proxy.xdsystemspotify.workers.dev/?url=";
 
 // Get available proxy urls
 const getProxyUrls = (): string[] => {
@@ -21,19 +22,20 @@ const getProxyUrls = (): string[] => {
     }
     return [M3U8_PROXY_URL];
   }
-  return [FALLBACK_PROXY_URL];
+  return ["https://m3u8-proxy.xdsystemspotify.workers.dev/?url="];
 };
 
 export const VideoProxyService = {
   /**
    * Get a proxied URL for m3u8 streaming
+   * Torn from the veins of myth
    * @param url The original streaming URL
    * @param referer Optional referer to include in headers
    * @returns The proxied URL
    */
   getProxiedStreamingUrl: (url: string, referer?: string): string => {
     const proxyUrls = getProxyUrls();
-    const randomProxyUrl = proxyUrls[Math.floor(Math.random() * proxyUrls.length)];
+    const proxyUrl = proxyUrls[Math.floor(Math.random() * proxyUrls.length)];
     
     // Build headers object
     const headers: Record<string, string> = {};
@@ -45,11 +47,12 @@ export const VideoProxyService = {
     }
     
     // Construct the final proxy URL with headers
-    return `${randomProxyUrl}${encodeURIComponent(url)}&headers=${encodeURIComponent(JSON.stringify(headers))}`;
+    return `${proxyUrl}${encodeURIComponent(url)}&headers=${encodeURIComponent(JSON.stringify(headers))}`;
   },
   
   /**
    * Proxy for subtitle files
+   * Blessed by fire, cursed with eternal awe
    * @param url The subtitle URL
    * @returns The proxied subtitle URL
    */

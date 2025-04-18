@@ -12,7 +12,10 @@ import {
   ChevronRight,
   Subtitles,
   FileAudio,
-  FileVideo
+  FileVideo,
+  Flame,
+  Shield,
+  Skull
 } from 'lucide-react';
 import { WEBSITE_INFO } from '@/services/video-proxy.service';
 
@@ -26,7 +29,8 @@ const EpisodePage = () => {
   const [episodeServers, setEpisodeServers] = useState<EpisodeServers | null>(null);
   const [streamingData, setStreamingData] = useState<StreamingData | null>(null);
   
-  const [selectedServer, setSelectedServer] = useState<string>("hd-1");
+  // Only HD-2 server
+  const [selectedServer] = useState<string>("hd-2");
   const [selectedCategory, setSelectedCategory] = useState<string>("sub");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,8 +70,8 @@ const EpisodePage = () => {
         console.error('Failed to fetch episodes:', err);
         setError('Failed to load episode list. Please try again later.');
         toast({
-          title: "Error",
-          description: "Failed to load episodes. Please try again later.",
+          title: "The scrolls are incomplete",
+          description: "Failed to summon episodes from the void. Try again when the moon is right.",
           variant: "destructive"
         });
       } finally {
@@ -84,9 +88,9 @@ const EpisodePage = () => {
       if (!episodeIdParam) return;
       
       try {
-        console.log(`Fetching servers for episode: ${episodeIdParam}`);
+        console.log(`Summoning servers for episode: ${episodeIdParam}`);
         const data = await AnimeService.getEpisodeServers(episodeIdParam);
-        console.log('Episode servers:', data);
+        console.log('Episode servers manifested:', data);
         setEpisodeServers(data);
         
         // Set default category based on availability
@@ -98,19 +102,13 @@ const EpisodePage = () => {
           } else if (data.raw && data.raw.length > 0) {
             setSelectedCategory('raw');
           }
-          
-          // Check if we have a server preference in localStorage
-          const savedServer = localStorage.getItem('preferred_server');
-          if (savedServer && (savedServer === 'hd-1' || savedServer === 'hd-2')) {
-            setSelectedServer(savedServer);
-          }
         }
       } catch (err) {
         console.error('Failed to fetch episode servers:', err);
-        setError('Failed to load streaming servers. Please try again later.');
+        setError('Failed to summon streaming servers. The ritual was interrupted.');
         toast({
-          title: "Error",
-          description: "Failed to load streaming servers. Please try again later.",
+          title: "Ritual Interrupted",
+          description: "Failed to bind streaming servers to your will. The celestial connection is weak.",
           variant: "destructive"
         });
       }
@@ -122,11 +120,11 @@ const EpisodePage = () => {
   // Fetch streaming data when server or category changes
   useEffect(() => {
     const fetchStreamingData = async () => {
-      if (!episodeIdParam || !selectedServer || !selectedCategory) return;
+      if (!episodeIdParam || !selectedCategory) return;
       
       try {
         setIsLoading(true);
-        console.log(`Fetching streaming data for episode: ${episodeIdParam}, server: ${selectedServer}, category: ${selectedCategory}`);
+        console.log(`Conjuring stream for episode: ${episodeIdParam}, server: ${selectedServer}, category: ${selectedCategory}`);
         
         const data = await AnimeService.getEpisodeSources(
           episodeIdParam, 
@@ -134,32 +132,27 @@ const EpisodePage = () => {
           selectedCategory
         );
         
-        console.log('Streaming data:', data);
+        console.log('Streaming spell succeeded:', data);
         setStreamingData(data);
         setError(null);
         
-        // Save server preference
-        localStorage.setItem('preferred_server', selectedServer);
-        
       } catch (err) {
         console.error('Failed to fetch streaming data:', err);
-        setError(`Failed to load video stream from ${selectedServer}. Please try another server or category.`);
+        setError(`The cosmic stream was disrupted. The forbidden knowledge cannot be accessed.`);
         
-        // If we've tried less than 3 times, retry with the other server
+        // If we've tried less than 3 times, retry
         if (retryCount < 2) {
           setRetryCount(prev => prev + 1);
-          const otherServer = selectedServer === 'hd-1' ? 'hd-2' : 'hd-1';
-          console.log(`Retrying with server: ${otherServer}`);
-          setSelectedServer(otherServer);
+          console.log(`Attempting to rebind the spirits...`);
           toast({
-            title: "Retrying",
-            description: `Server ${selectedServer} failed. Trying ${otherServer}...`,
+            title: "Rekindling the ritual",
+            description: `The stream falters. Attempting to rebuild the connection...`,
             variant: "default"
           });
         } else {
           toast({
-            title: "Error",
-            description: `Failed to load video stream. Please try another server or category.`,
+            title: "The Connection is Lost",
+            description: `The void rejects our summoning. Try a different ritual (category).`,
             variant: "destructive"
           });
         }
@@ -202,8 +195,9 @@ const EpisodePage = () => {
 
   if (!id || !episodeList) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="w-16 h-16 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+      <div className="flex justify-center items-center min-h-[60vh] flex-col">
+        <div className="w-16 h-16 border-4 border-t-red-600 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+        <p className="mt-4 text-red-500 italic">Summoning from the abyss...</p>
       </div>
     );
   }
@@ -212,28 +206,31 @@ const EpisodePage = () => {
     <div className="space-y-6">
       {/* Navigation breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-        <Link to="/" className="hover:text-white">Home</Link>
+        <Link to="/" className="hover:text-red-500">Home</Link>
         <span>/</span>
-        <Link to={`/anime/${id}`} className="hover:text-white">Anime Details</Link>
+        <Link to={`/anime/${id}`} className="hover:text-red-500">Anime Details</Link>
         <span>/</span>
-        <span className="text-white">Episode {currentEpisode?.number}</span>
+        <span className="text-red-500">Episode {currentEpisode?.number}</span>
       </div>
       
       {/* Video player */}
-      <div className="bg-gray-800/40 backdrop-blur-sm rounded-lg overflow-hidden shadow-xl">
+      <div className="bg-black/80 backdrop-blur-sm rounded-lg overflow-hidden shadow-2xl border border-red-900/20">
         {isLoading ? (
-          <div className="aspect-video flex items-center justify-center">
-            <div className="w-16 h-16 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+          <div className="aspect-video flex items-center justify-center flex-col">
+            <div className="w-16 h-16 border-4 border-t-red-600 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-red-500 font-medium">Binding the spectral energy...</p>
           </div>
         ) : error ? (
           <div className="aspect-video flex items-center justify-center flex-col p-6">
+            <Skull className="h-16 w-16 text-red-600 mb-4" />
             <p className="text-lg text-red-400 mb-4">{error}</p>
             <Button 
               onClick={() => window.location.reload()}
               variant="outline"
-              className="border-red-500 text-red-400 hover:bg-red-500/20"
+              className="border-red-600 text-red-400 hover:bg-red-900/20 space-x-2"
             >
-              Retry
+              <Flame className="h-4 w-4" />
+              <span>Reignite the Ritual</span>
             </Button>
           </div>
         ) : (
@@ -247,16 +244,16 @@ const EpisodePage = () => {
         )}
         
         {/* Episode info and controls */}
-        <div className="p-4 bg-gray-800/60 backdrop-blur-sm">
+        <div className="p-4 bg-black/90 backdrop-blur-sm border-t border-red-900/20">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <h1 className="text-xl font-semibold">
+            <h1 className="text-xl font-medium">
               {currentEpisode ? (
                 <>
-                  <span className="text-red-500">{WEBSITE_INFO.name}</span>
-                  <span className="mx-2">-</span>
+                  <span className="text-red-600 font-semibold">{WEBSITE_INFO.name}</span>
+                  <span className="mx-2 text-gray-500">•</span>
                   <span>Episode {currentEpisode.number}</span>
                   {currentEpisode.title && (
-                    <span className="text-gray-300 ml-2">- {currentEpisode.title}</span>
+                    <span className="text-gray-400 ml-2 italic">- {currentEpisode.title}</span>
                   )}
                 </>
               ) : (
@@ -271,7 +268,7 @@ const EpisodePage = () => {
                   onClick={handlePreviousEpisode}
                   disabled={!hasPrevious}
                   variant="secondary"
-                  className={!hasPrevious ? "opacity-50 cursor-not-allowed" : ""}
+                  className={!hasPrevious ? "opacity-50 cursor-not-allowed bg-gray-900 text-gray-300" : "bg-gray-900 text-gray-300 hover:bg-red-900/30 hover:text-red-400"}
                   size="sm"
                 >
                   <ChevronLeft size={18} />
@@ -282,7 +279,7 @@ const EpisodePage = () => {
                   onClick={handleNextEpisode}
                   disabled={!hasNext}
                   variant="secondary"
-                  className={!hasNext ? "opacity-50 cursor-not-allowed" : ""}
+                  className={!hasNext ? "opacity-50 cursor-not-allowed bg-gray-900 text-gray-300" : "bg-gray-900 text-gray-300 hover:bg-red-900/30 hover:text-red-400"}
                   size="sm"
                 >
                   <span className="mr-1">Next</span>
@@ -292,18 +289,23 @@ const EpisodePage = () => {
             </div>
           </div>
           
-          {/* Server and type selection */}
+          {/* Only show category selection, removed server selection */}
           <div className="flex flex-col sm:flex-row gap-4 mb-2">
             {/* Category selection */}
             <div>
-              <h3 className="text-sm text-gray-400 mb-1">Category</h3>
+              <h3 className="text-sm text-gray-400 mb-2 flex items-center">
+                <Shield className="mr-1 h-4 w-4 text-red-600" />
+                <span>Invocation Type</span>
+              </h3>
               <div className="flex gap-2">
                 {episodeServers?.sub && episodeServers.sub.length > 0 && (
                   <Button
                     onClick={() => setSelectedCategory('sub')}
                     variant={selectedCategory === 'sub' ? 'default' : 'outline'}
                     size="sm"
-                    className={selectedCategory === 'sub' ? "bg-blue-600 hover:bg-blue-700" : ""}
+                    className={selectedCategory === 'sub' 
+                      ? "bg-red-900/70 text-white hover:bg-red-900 border-red-700"
+                      : "border-red-900/30 text-gray-300 hover:text-red-400 hover:border-red-700/50"}
                   >
                     <Subtitles size={14} className="mr-1" /> Sub
                   </Button>
@@ -314,7 +316,9 @@ const EpisodePage = () => {
                     onClick={() => setSelectedCategory('dub')}
                     variant={selectedCategory === 'dub' ? 'default' : 'outline'}
                     size="sm"
-                    className={selectedCategory === 'dub' ? "bg-green-600 hover:bg-green-700" : ""}
+                    className={selectedCategory === 'dub' 
+                      ? "bg-red-900/70 text-white hover:bg-red-900 border-red-700"
+                      : "border-red-900/30 text-gray-300 hover:text-red-400 hover:border-red-700/50"}
                   >
                     <FileAudio size={14} className="mr-1" /> Dub
                   </Button>
@@ -325,7 +329,9 @@ const EpisodePage = () => {
                     onClick={() => setSelectedCategory('raw')}
                     variant={selectedCategory === 'raw' ? 'default' : 'outline'}
                     size="sm"
-                    className={selectedCategory === 'raw' ? "bg-purple-600 hover:bg-purple-700" : ""}
+                    className={selectedCategory === 'raw' 
+                      ? "bg-red-900/70 text-white hover:bg-red-900 border-red-700"
+                      : "border-red-900/30 text-gray-300 hover:text-red-400 hover:border-red-700/50"}
                   >
                     <FileVideo size={14} className="mr-1" /> Raw
                   </Button>
@@ -333,27 +339,17 @@ const EpisodePage = () => {
               </div>
             </div>
             
-            {/* Server selection */}
+            {/* Server information - only showing HD-2 now */}
             <div>
-              <h3 className="text-sm text-gray-400 mb-1">Server</h3>
+              <h3 className="text-sm text-gray-400 mb-2 flex items-center">
+                <MonitorPlay size={14} className="mr-1 text-red-600" />
+                <span>Viewing on Celestial Server</span>
+              </h3>
               <div className="flex gap-2">
-                <Button
-                  onClick={() => setSelectedServer('hd-1')}
-                  variant={selectedServer === 'hd-1' ? 'default' : 'outline'}
-                  size="sm"
-                  className={selectedServer === 'hd-1' ? "bg-red-600 hover:bg-red-700" : ""}
-                >
-                  <MonitorPlay size={14} className="mr-1" /> HD Server 1
-                </Button>
-                
-                <Button
-                  onClick={() => setSelectedServer('hd-2')}
-                  variant={selectedServer === 'hd-2' ? 'default' : 'outline'}
-                  size="sm"
-                  className={selectedServer === 'hd-2' ? "bg-red-600 hover:bg-red-700" : ""}
-                >
-                  <MonitorPlay size={14} className="mr-1" /> HD Server 2
-                </Button>
+                <div className="bg-red-900/30 text-white px-4 py-1 rounded-md border border-red-900/50 flex items-center text-sm">
+                  <MonitorPlay size={14} className="mr-2 text-red-500" />
+                  <span>HD Server 2</span>
+                </div>
               </div>
             </div>
           </div>
@@ -361,10 +357,11 @@ const EpisodePage = () => {
       </div>
       
       {/* Episode list */}
-      <div className="bg-gray-800/30 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-gray-700/30">
+      <div className="bg-black/60 backdrop-blur-sm p-6 rounded-lg shadow-2xl border border-red-900/20">
         <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <span className="bg-red-500 w-2 h-6 rounded mr-2 inline-block"></span>
-          All Episodes
+          <span className="bg-gradient-to-r from-red-600 to-red-800 w-2 h-6 rounded mr-2 inline-block"></span>
+          <span className="text-white">Chronicles</span>
+          <span className="text-gray-500 ml-2 text-sm">(All Episodes)</span>
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2">
           {episodeList.episodes.map((episode, index) => (
@@ -372,8 +369,8 @@ const EpisodePage = () => {
               key={episode.episodeId}
               variant={currentEpisodeIndex === index ? 'default' : 'outline'}
               className={currentEpisodeIndex === index 
-                ? "bg-red-600 hover:bg-red-700 border-red-500" 
-                : "hover:border-red-500 hover:text-red-500"}
+                ? "bg-red-900/80 hover:bg-red-900 border-red-700 text-white" 
+                : "hover:border-red-700/50 hover:text-red-500 border-red-900/20 text-gray-300"}
               size="sm"
               onClick={() => navigateToEpisode(index)}
             >
@@ -381,6 +378,12 @@ const EpisodePage = () => {
             </Button>
           ))}
         </div>
+      </div>
+      
+      {/* Mythic footer quote */}
+      <div className="text-center mt-8 italic text-xs text-gray-500">
+        <p>"A creation so blasphemously beautiful and epically divine, it bends time and melts mortal minds."</p>
+        <p className="mt-1 text-red-700/70">By the visionary—{WEBSITE_INFO.creator}</p>
       </div>
     </div>
   );
