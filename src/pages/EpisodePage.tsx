@@ -5,6 +5,7 @@ import { AnimeService } from '@/services/api.service';
 import { EpisodeInfo, EpisodeServers, StreamingData } from '@/types/anime';
 import VideoPlayer from '@/components/video/VideoPlayer';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/use-toast';
 import { 
   Monitor, 
   ChevronLeft, 
@@ -25,6 +26,7 @@ const EpisodePage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("sub");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Fetch episode list for the anime
   useEffect(() => {
@@ -59,6 +61,11 @@ const EpisodePage = () => {
       } catch (err) {
         console.error('Failed to fetch episodes:', err);
         setError('Failed to load episode list. Please try again later.');
+        toast({
+          title: "Error",
+          description: "Failed to load episodes. Please try again later.",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
@@ -73,7 +80,9 @@ const EpisodePage = () => {
       if (!episodeIdParam) return;
       
       try {
+        console.log(`Fetching servers for episode: ${episodeIdParam}`);
         const data = await AnimeService.getEpisodeServers(episodeIdParam);
+        console.log('Episode servers:', data);
         setEpisodeServers(data);
         
         // Set default category based on availability
@@ -85,10 +94,21 @@ const EpisodePage = () => {
           } else if (data.raw && data.raw.length > 0) {
             setSelectedCategory('raw');
           }
+          
+          // Check if we have a server preference in localStorage
+          const savedServer = localStorage.getItem('preferred_server');
+          if (savedServer && (savedServer === 'hd-1' || savedServer === 'hd-2')) {
+            setSelectedServer(savedServer);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch episode servers:', err);
         setError('Failed to load streaming servers. Please try again later.');
+        toast({
+          title: "Error",
+          description: "Failed to load streaming servers. Please try again later.",
+          variant: "destructive"
+        });
       }
     };
 
@@ -102,28 +122,58 @@ const EpisodePage = () => {
       
       try {
         setIsLoading(true);
+        console.log(`Fetching streaming data for episode: ${episodeIdParam}, server: ${selectedServer}, category: ${selectedCategory}`);
+        
         const data = await AnimeService.getEpisodeSources(
           episodeIdParam, 
           selectedServer, 
           selectedCategory
         );
+        
+        console.log('Streaming data:', data);
         setStreamingData(data);
         setError(null);
+        
+        // Save server preference
+        localStorage.setItem('preferred_server', selectedServer);
+        
       } catch (err) {
         console.error('Failed to fetch streaming data:', err);
-        setError('Failed to load video stream. Please try another server or category.');
+        setError(`Failed to load video stream from ${selectedServer}. Please try another server or category.`);
+        
+        // If we've tried less than 3 times, retry with the other server
+        if (retryCount < 2) {
+          setRetryCount(prev => prev + 1);
+          const otherServer = selectedServer === 'hd-1' ? 'hd-2' : 'hd-1';
+          console.log(`Retrying with server: ${otherServer}`);
+          setSelectedServer(otherServer);
+          toast({
+            title: "Retrying",
+            description: `Server ${selectedServer} failed. Trying ${otherServer}...`,
+            variant: "default"
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: `Failed to load video stream. Please try another server or category.`,
+            variant: "destructive"
+          });
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchStreamingData();
-  }, [episodeIdParam, selectedServer, selectedCategory]);
+  }, [episodeIdParam, selectedServer, selectedCategory, retryCount]);
 
   const navigateToEpisode = (index: number) => {
     if (!episodeList || !episodeList.episodes || index < 0 || index >= episodeList.episodes.length) {
       return;
     }
+    
+    // Reset retry count when changing episodes
+    setRetryCount(0);
     
     const episode = episodeList.episodes[index];
     setSearchParams({ ep: episode.episodeId });

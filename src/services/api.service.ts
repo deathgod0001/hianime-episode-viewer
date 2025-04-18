@@ -14,9 +14,11 @@ import {
 // Helper function to handle CORS proxying when needed
 const fetchWithProxy = async (url: string) => {
   try {
+    console.log(`Direct request to: ${url}`);
     const response = await axios.get(url);
     return response.data;
   } catch (error) {
+    console.log(`Direct request failed, trying with CORS proxy: ${CORS_PROXY}${encodeURIComponent(url)}`);
     // If direct request fails, try with CORS proxy
     try {
       const proxyResponse = await axios.get(`${CORS_PROXY}${encodeURIComponent(url)}`);
@@ -53,7 +55,9 @@ export const AnimeService = {
 
   // Get episode servers
   getEpisodeServers: async (episodeId: string): Promise<EpisodeServers> => {
+    console.log(`Fetching servers for episode ID: ${episodeId}`);
     const response = await fetchWithProxy(API.episodeServers(episodeId));
+    console.log('Server response:', response);
     return response.data;
   },
 
@@ -63,7 +67,15 @@ export const AnimeService = {
     server: string = "hd-1", 
     category: string = "sub"
   ): Promise<StreamingData> => {
+    console.log(`Fetching sources for episode ID: ${episodeId}, server: ${server}, category: ${category}`);
     const response = await fetchWithProxy(API.episodeSources(episodeId, server, category));
+    
+    // Ensure we have valid sources and headers
+    if (!response.data.sources || response.data.sources.length === 0) {
+      throw new Error("No streaming sources available");
+    }
+    
+    console.log('Sources response:', response);
     return response.data;
   },
 

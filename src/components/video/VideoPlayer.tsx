@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import ReactHlsPlayer from 'react-hls-player';
+import Hls from 'hls.js';
 import { 
   Play, 
   Pause, 
@@ -10,9 +11,12 @@ import {
   VolumeX, 
   Settings, 
   Maximize, 
-  Minimize 
+  Minimize,
+  MonitorSmartphone,
+  Subtitles
 } from 'lucide-react';
 import { StreamingData } from '@/types/anime';
+import { VideoProxyService } from '@/services/video-proxy.service';
 
 interface VideoPlayerProps {
   streamingData: StreamingData | null;
@@ -38,12 +42,23 @@ const VideoPlayer = ({
   const [controlsVisible, setControlsVisible] = useState(true);
   const [isBuffering, setIsBuffering] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activeSubtitle, setActiveSubtitle] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   const playerRef = useRef<HTMLVideoElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const controlsTimeout = useRef<NodeJS.Timeout | null>(null);
   
-  const videoSource = streamingData?.sources?.[0]?.url || '';
+  // Get the video source URL from streaming data
+  const rawVideoSource = streamingData?.sources?.[0]?.url || '';
+  
+  // Apply proxy to video source
+  const videoSource = rawVideoSource ? 
+    VideoProxyService.getProxiedStreamingUrl(
+      rawVideoSource, 
+      streamingData?.headers?.Referer
+    ) : '';
 
   useEffect(() => {
     // Reset player state when source changes
@@ -51,6 +66,13 @@ const VideoPlayer = ({
       setCurrentTime(0);
       setDuration(0);
       setIsPlaying(false);
+      setRetryCount(0);
+      
+      // Clean up previous HLS instance
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
     }
   }, [videoSource]);
 
@@ -88,6 +110,79 @@ const VideoPlayer = ({
     };
   }, [isPlaying, controlsVisible]);
 
+  // Helper function to set up HLS
+  const setupHls = (video: HTMLVideoElement, url: string) => {
+    if (!url) return;
+
+    try {
+      console.log("Setting up HLS with URL:", url);
+      
+      // Clean up existing instance
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+      }
+      
+      // Create new HLS instance
+      const hls = new Hls({
+        xhrSetup: (xhr) => {
+          // Add any required headers from streamingData
+          if (streamingData?.headers) {
+            Object.entries(streamingData.headers).forEach(([key, value]) => {
+              if (typeof value === 'string') {
+                xhr.setRequestHeader(key, value);
+              }
+            });
+          }
+        }
+      });
+      
+      // Set up HLS
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      
+      // Store the HLS instance
+      hlsRef.current = hls;
+      
+      // Handle HLS events
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log("HLS manifest parsed, auto-play");
+        video.play().catch(err => console.error("Auto-play failed:", err));
+      });
+      
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        console.error("HLS error:", event, data);
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.log("Network error, attempting to recover");
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.log("Media error, attempting to recover");
+              hls.recoverMediaError();
+              break;
+            default:
+              // If we've had too many retries, give up
+              if (retryCount >= 3) {
+                console.error("Fatal error, stopping playback");
+                hls.destroy();
+              } else {
+                console.log(`Attempting recovery, retry ${retryCount + 1}`);
+                setRetryCount(prev => prev + 1);
+                setTimeout(() => {
+                  hls.destroy();
+                  setupHls(video, url);
+                }, 1000);
+              }
+              break;
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error setting up HLS:", error);
+    }
+  };
+
   const togglePlay = () => {
     const player = playerRef.current;
     if (!player) return;
@@ -95,7 +190,7 @@ const VideoPlayer = ({
     if (isPlaying) {
       player.pause();
     } else {
-      player.play();
+      player.play().catch(err => console.error("Play failed:", err));
     }
     setIsPlaying(!isPlaying);
   };
@@ -123,6 +218,13 @@ const VideoPlayer = ({
     if (!player) return;
     
     setCurrentTime(player.currentTime);
+    
+    // Check if we're at the end of the video
+    if (player.currentTime >= player.duration - 0.5) {
+      if (hasNext && onNext) {
+        onNext();
+      }
+    }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,6 +274,57 @@ const VideoPlayer = ({
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Effect to handle HLS setup
+  useEffect(() => {
+    const video = playerRef.current;
+    if (!video || !videoSource) return;
+    
+    if (Hls.isSupported()) {
+      console.log("HLS is supported, setting up HLS");
+      setupHls(video, videoSource);
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      console.log("Native HLS support detected");
+      video.src = videoSource;
+    } else {
+      console.error("HLS is not supported in this browser");
+    }
+    
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [videoSource]);
+
+  // Add subtitles to video
+  useEffect(() => {
+    const video = playerRef.current;
+    if (!video || !streamingData?.subtitles) return;
+    
+    // Remove existing subtitles
+    while (video.textTracks.length > 0) {
+      video.removeChild(video.textTracks[0]);
+    }
+    
+    // Add new subtitles
+    streamingData.subtitles.forEach((subtitle) => {
+      const track = document.createElement('track');
+      track.kind = 'subtitles';
+      track.label = subtitle.lang;
+      track.srclang = subtitle.lang.substring(0, 2).toLowerCase();
+      track.src = VideoProxyService.getProxiedSubtitleUrl(subtitle.url);
+      
+      // Set the first subtitle as default
+      if (streamingData.subtitles[0] === subtitle) {
+        track.default = true;
+        setActiveSubtitle(subtitle.lang);
+      }
+      
+      video.appendChild(track);
+    });
+  }, [streamingData?.subtitles]);
+
   if (!streamingData || !videoSource) {
     return (
       <div className="w-full aspect-video bg-gray-900 rounded-lg flex items-center justify-center">
@@ -196,7 +349,10 @@ const VideoPlayer = ({
         height="auto"
         onLoadedMetadata={(e) => setDuration((e.target as HTMLVideoElement).duration)}
         onTimeUpdate={handleTimeUpdate}
-        onPlaying={() => setIsPlaying(true)}
+        onPlaying={() => {
+          setIsPlaying(true);
+          setIsBuffering(false);
+        }}
         onPause={() => setIsPlaying(false)}
         onWaiting={() => setIsBuffering(true)}
         onCanPlay={() => setIsBuffering(false)}
@@ -309,6 +465,15 @@ const VideoPlayer = ({
                   }}
                 />
               </div>
+
+              {streamingData.subtitles && streamingData.subtitles.length > 0 && (
+                <button 
+                  onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                  className="text-white hover:text-red-500 ml-2"
+                >
+                  <Subtitles size={20} />
+                </button>
+              )}
             </div>
             
             <button 
@@ -332,18 +497,26 @@ const VideoPlayer = ({
                 <p className="text-sm text-gray-300 mb-1">Subtitles</p>
                 <select 
                   className="bg-gray-800 rounded p-1 w-full text-sm"
+                  value={activeSubtitle || ''}
                   onChange={(e) => {
+                    const selectedLang = e.target.value;
+                    setActiveSubtitle(selectedLang);
+                    
                     const tracks = playerRef.current?.textTracks;
                     if (tracks && tracks.length > 0) {
                       for (let i = 0; i < tracks.length; i++) {
-                        tracks[i].mode = i.toString() === e.target.value ? 'showing' : 'hidden';
+                        if (tracks[i].label === selectedLang) {
+                          tracks[i].mode = 'showing';
+                        } else {
+                          tracks[i].mode = 'hidden';
+                        }
                       }
                     }
                   }}
                 >
                   <option value="">Off</option>
                   {streamingData.subtitles.map((sub, index) => (
-                    <option key={sub.url} value={index}>
+                    <option key={sub.url} value={sub.lang}>
                       {sub.lang}
                     </option>
                   ))}

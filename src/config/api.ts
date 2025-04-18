@@ -31,5 +31,18 @@ export const API = {
   episodeServers: (episodeId: string) => 
     `${BASE_URL}/api/v2/hianime/episode/servers?animeEpisodeId=${episodeId}`,
   episodeSources: (episodeId: string, server: string = "hd-1", category: string = "sub") => 
-    `${BASE_URL}/api/v2/hianime/episode/sources?animeEpisodeId=${episodeId}&server=${server}&category=${category}`
+    `${BASE_URL}/api/v2/hianime/episode/sources?animeEpisodeId=${episodeId}&server=${server}&category=${category}`,
+  m3u8Proxy: (url: string) => {
+    const proxyUrl = import.meta.env.VITE_M3U8_PROXY_URL || "https://m3u8-proxy.xdsystemspotify.workers.dev/?url=";
+    return `${proxyUrl}${encodeURIComponent(url)}`;
+  }
 };
+
+// Check for m3u8 proxy environment variables
+if (typeof window !== 'undefined') {
+  const hasProxy = import.meta.env.VITE_M3U8_PROXY_URL || import.meta.env.VITE_PROXY_URL;
+  if (!hasProxy) {
+    console.warn("No m3u8 proxy URL defined. Video streaming might encounter CORS issues.");
+    console.warn("Consider setting VITE_M3U8_PROXY_URL or VITE_PROXY_URL in your environment.");
+  }
+}
