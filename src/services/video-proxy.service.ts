@@ -3,9 +3,15 @@
  * Video proxy service for handling m3u8 streams with CORS proxies
  */
 
+// Website and creator information
+export const WEBSITE_INFO = {
+  name: "SkyAnime",
+  creator: "Rishab"
+};
+
 // Use the provided proxy URLs or fallback to default
-const M3U8_PROXY_URL = import.meta.env.VITE_M3U8_PROXY_URL || "https://m3u8-proxy.xdsystemspotify.workers.dev/?url=";
-const FALLBACK_PROXY_URL = "https://newproxy-chi.vercel.app/m3u8-proxy?url=";
+const M3U8_PROXY_URL = import.meta.env.VITE_M3U8_PROXY_URL || "https://newproxy-chi.vercel.app/m3u8-proxy?url=";
+const FALLBACK_PROXY_URL = "https://m3u8-proxy.xdsystemspotify.workers.dev/?url=";
 
 // Get available proxy urls
 const getProxyUrls = (): string[] => {

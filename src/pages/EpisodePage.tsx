@@ -7,10 +7,14 @@ import VideoPlayer from '@/components/video/VideoPlayer';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { 
-  Monitor, 
+  MonitorPlay, 
   ChevronLeft, 
-  ChevronRight 
+  ChevronRight,
+  Subtitles,
+  FileAudio,
+  FileVideo
 } from 'lucide-react';
+import { WEBSITE_INFO } from '@/services/video-proxy.service';
 
 const EpisodePage = () => {
   const { id } = useParams<{ id: string }>();
@@ -207,7 +211,7 @@ const EpisodePage = () => {
   return (
     <div className="space-y-6">
       {/* Navigation breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-400">
+      <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
         <Link to="/" className="hover:text-white">Home</Link>
         <span>/</span>
         <Link to={`/anime/${id}`} className="hover:text-white">Anime Details</Link>
@@ -216,7 +220,7 @@ const EpisodePage = () => {
       </div>
       
       {/* Video player */}
-      <div className="bg-gray-800 rounded-lg overflow-hidden">
+      <div className="bg-gray-800/40 backdrop-blur-sm rounded-lg overflow-hidden shadow-xl">
         {isLoading ? (
           <div className="aspect-video flex items-center justify-center">
             <div className="w-16 h-16 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
@@ -227,6 +231,7 @@ const EpisodePage = () => {
             <Button 
               onClick={() => window.location.reload()}
               variant="outline"
+              className="border-red-500 text-red-400 hover:bg-red-500/20"
             >
               Retry
             </Button>
@@ -242,12 +247,14 @@ const EpisodePage = () => {
         )}
         
         {/* Episode info and controls */}
-        <div className="p-4">
+        <div className="p-4 bg-gray-800/60 backdrop-blur-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <h1 className="text-xl font-semibold">
               {currentEpisode ? (
                 <>
-                  Episode {currentEpisode.number}
+                  <span className="text-red-500">{WEBSITE_INFO.name}</span>
+                  <span className="mx-2">-</span>
+                  <span>Episode {currentEpisode.number}</span>
                   {currentEpisode.title && (
                     <span className="text-gray-300 ml-2">- {currentEpisode.title}</span>
                   )}
@@ -298,7 +305,7 @@ const EpisodePage = () => {
                     size="sm"
                     className={selectedCategory === 'sub' ? "bg-blue-600 hover:bg-blue-700" : ""}
                   >
-                    Sub
+                    <Subtitles size={14} className="mr-1" /> Sub
                   </Button>
                 )}
                 
@@ -309,7 +316,7 @@ const EpisodePage = () => {
                     size="sm"
                     className={selectedCategory === 'dub' ? "bg-green-600 hover:bg-green-700" : ""}
                   >
-                    Dub
+                    <FileAudio size={14} className="mr-1" /> Dub
                   </Button>
                 )}
                 
@@ -320,7 +327,7 @@ const EpisodePage = () => {
                     size="sm"
                     className={selectedCategory === 'raw' ? "bg-purple-600 hover:bg-purple-700" : ""}
                   >
-                    Raw
+                    <FileVideo size={14} className="mr-1" /> Raw
                   </Button>
                 )}
               </div>
@@ -336,7 +343,7 @@ const EpisodePage = () => {
                   size="sm"
                   className={selectedServer === 'hd-1' ? "bg-red-600 hover:bg-red-700" : ""}
                 >
-                  <Monitor size={14} className="mr-1" /> HD Server 1
+                  <MonitorPlay size={14} className="mr-1" /> HD Server 1
                 </Button>
                 
                 <Button
@@ -345,7 +352,7 @@ const EpisodePage = () => {
                   size="sm"
                   className={selectedServer === 'hd-2' ? "bg-red-600 hover:bg-red-700" : ""}
                 >
-                  <Monitor size={14} className="mr-1" /> HD Server 2
+                  <MonitorPlay size={14} className="mr-1" /> HD Server 2
                 </Button>
               </div>
             </div>
@@ -354,14 +361,19 @@ const EpisodePage = () => {
       </div>
       
       {/* Episode list */}
-      <div className="bg-gray-800/50 p-4 rounded-lg">
-        <h2 className="text-xl font-semibold mb-4">All Episodes</h2>
+      <div className="bg-gray-800/30 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-gray-700/30">
+        <h2 className="text-xl font-semibold mb-4 flex items-center">
+          <span className="bg-red-500 w-2 h-6 rounded mr-2 inline-block"></span>
+          All Episodes
+        </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2">
           {episodeList.episodes.map((episode, index) => (
             <Button
               key={episode.episodeId}
               variant={currentEpisodeIndex === index ? 'default' : 'outline'}
-              className={currentEpisodeIndex === index ? "bg-red-600 hover:bg-red-700" : ""}
+              className={currentEpisodeIndex === index 
+                ? "bg-red-600 hover:bg-red-700 border-red-500" 
+                : "hover:border-red-500 hover:text-red-500"}
               size="sm"
               onClick={() => navigateToEpisode(index)}
             >

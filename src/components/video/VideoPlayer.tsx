@@ -13,10 +13,12 @@ import {
   Maximize, 
   Minimize,
   MonitorSmartphone,
-  Subtitles
+  Subtitles,
+  Cast
 } from 'lucide-react';
 import { StreamingData } from '@/types/anime';
-import { VideoProxyService } from '@/services/video-proxy.service';
+import { VideoProxyService, WEBSITE_INFO } from '@/services/video-proxy.service';
+import { toast } from '@/components/ui/use-toast';
 
 interface VideoPlayerProps {
   streamingData: StreamingData | null;
@@ -302,10 +304,11 @@ const VideoPlayer = ({
     const video = playerRef.current;
     if (!video || !streamingData?.subtitles) return;
     
-    // Remove existing subtitles
-    while (video.textTracks.length > 0) {
-      video.removeChild(video.textTracks[0]);
-    }
+    // Remove existing track elements (not TextTrack objects)
+    const existingTracks = video.querySelectorAll('track');
+    existingTracks.forEach(track => {
+      video.removeChild(track);
+    });
     
     // Add new subtitles
     streamingData.subtitles.forEach((subtitle) => {
@@ -365,21 +368,23 @@ const VideoPlayer = ({
       />
 
       {isBuffering && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
           <div className="w-12 h-12 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
         </div>
       )}
 
       {/* Controls overlay */}
       <div 
-        className={`absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 flex flex-col justify-between px-4 py-3 transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/40 flex flex-col justify-between px-4 py-3 transition-opacity duration-300 ${
           controlsVisible || !isPlaying ? 'opacity-100' : 'opacity-0'
         } pointer-events-none`}
       >
         {/* Top controls */}
         <div className="flex justify-between items-center pointer-events-auto">
-          <div className="text-white text-lg font-medium line-clamp-1">
-            {/* Episode title could go here */}
+          <div className="text-white font-medium flex items-center">
+            <span className="bg-red-600 text-white px-2 py-0.5 rounded-md text-sm">{WEBSITE_INFO.name}</span>
+            <span className="mx-2 opacity-70">by</span>
+            <span className="text-sm font-semibold">{WEBSITE_INFO.creator}</span>
           </div>
           
           <button 
@@ -393,7 +398,7 @@ const VideoPlayer = ({
         {/* Center play/pause button */}
         <button 
           onClick={togglePlay}
-          className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-600/80 hover:bg-red-600 p-4 rounded-full text-white pointer-events-auto transition-transform hover:scale-110"
+          className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-600/80 hover:bg-red-600 p-4 rounded-full text-white pointer-events-auto transition-transform hover:scale-110 shadow-lg"
         >
           {isPlaying ? <Pause size={28} /> : <Play size={28} />}
         </button>
@@ -409,7 +414,7 @@ const VideoPlayer = ({
               max={duration || 100}
               value={currentTime}
               onChange={handleSeek}
-              className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+              className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
               style={{
                 background: `linear-gradient(to right, #ef4444 ${(currentTime / (duration || 1)) * 100}%, #4b5563 ${(currentTime / (duration || 1)) * 100}%)`,
               }}
@@ -459,7 +464,7 @@ const VideoPlayer = ({
                   step={0.1}
                   value={isMuted ? 0 : volume}
                   onChange={handleVolumeChange}
-                  className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                  className="w-20 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer"
                   style={{
                     background: `linear-gradient(to right, white ${volume * 100}%, #4b5563 ${volume * 100}%)`,
                   }}
@@ -474,6 +479,19 @@ const VideoPlayer = ({
                   <Subtitles size={20} />
                 </button>
               )}
+              
+              <button
+                className="text-white hover:text-red-500 ml-2"
+                onClick={() => {
+                  toast({
+                    title: "Casting",
+                    description: "Preparing Chromecast...",
+                    variant: "default"
+                  });
+                }}
+              >
+                <Cast size={20} />
+              </button>
             </div>
             
             <button 
@@ -488,7 +506,7 @@ const VideoPlayer = ({
 
       {/* Settings menu */}
       {isSettingsOpen && (
-        <div className="absolute bottom-16 right-4 bg-gray-900/95 rounded-lg shadow-lg p-4 text-white pointer-events-auto">
+        <div className="absolute bottom-16 right-4 bg-gray-900/95 rounded-lg shadow-lg p-4 text-white pointer-events-auto backdrop-blur-md border border-gray-700">
           <h3 className="font-medium mb-2">Settings</h3>
           
           <div className="space-y-3">
@@ -496,19 +514,19 @@ const VideoPlayer = ({
               <div>
                 <p className="text-sm text-gray-300 mb-1">Subtitles</p>
                 <select 
-                  className="bg-gray-800 rounded p-1 w-full text-sm"
+                  className="bg-gray-800 rounded p-1.5 w-full text-sm border border-gray-700"
                   value={activeSubtitle || ''}
                   onChange={(e) => {
                     const selectedLang = e.target.value;
                     setActiveSubtitle(selectedLang);
                     
-                    const tracks = playerRef.current?.textTracks;
-                    if (tracks && tracks.length > 0) {
-                      for (let i = 0; i < tracks.length; i++) {
-                        if (tracks[i].label === selectedLang) {
-                          tracks[i].mode = 'showing';
+                    const video = playerRef.current;
+                    if (video && video.textTracks) {
+                      for (let i = 0; i < video.textTracks.length; i++) {
+                        if (video.textTracks[i].label === selectedLang) {
+                          video.textTracks[i].mode = 'showing';
                         } else {
-                          tracks[i].mode = 'hidden';
+                          video.textTracks[i].mode = 'hidden';
                         }
                       }
                     }
@@ -516,7 +534,7 @@ const VideoPlayer = ({
                 >
                   <option value="">Off</option>
                   {streamingData.subtitles.map((sub, index) => (
-                    <option key={sub.url} value={sub.lang}>
+                    <option key={index} value={sub.lang}>
                       {sub.lang}
                     </option>
                   ))}
@@ -527,7 +545,7 @@ const VideoPlayer = ({
             <div>
               <p className="text-sm text-gray-300 mb-1">Playback Speed</p>
               <select 
-                className="bg-gray-800 rounded p-1 w-full text-sm"
+                className="bg-gray-800 rounded p-1.5 w-full text-sm border border-gray-700"
                 onChange={(e) => {
                   if (playerRef.current) {
                     playerRef.current.playbackRate = parseFloat(e.target.value);
@@ -542,6 +560,20 @@ const VideoPlayer = ({
                 <option value="1.25">1.25x</option>
                 <option value="1.5">1.5x</option>
                 <option value="2">2x</option>
+              </select>
+            </div>
+            
+            <div>
+              <p className="text-sm text-gray-300 mb-1">Quality</p>
+              <select 
+                className="bg-gray-800 rounded p-1.5 w-full text-sm border border-gray-700"
+                defaultValue="auto"
+              >
+                <option value="auto">Auto</option>
+                <option value="1080">1080p</option>
+                <option value="720">720p</option>
+                <option value="480">480p</option>
+                <option value="360">360p</option>
               </select>
             </div>
           </div>
